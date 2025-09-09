@@ -18,7 +18,7 @@ try:
     from .cache import JsonCache
     from .categorize_db import load_taxonomy, categorize_enhanced, get_brand_aliases
     from .db_persistence import get_persistence_instance
-    from .simple_db_connector import SimplePostgreSQLConnector, SimpleDatabaseCache
+    from .unified_connector import get_unified_connector
     from .llm_connectors import extract_with_llm, enrich_product_data, enabled as llm_enabled
 except ImportError:
     from utils import parse_price, slugify
@@ -27,7 +27,7 @@ except ImportError:
     from cache import JsonCache
     from categorize_db import load_taxonomy, categorize_enhanced, get_brand_aliases
     from db_persistence import get_persistence_instance
-    from simple_db_connector import SimplePostgreSQLConnector, SimpleDatabaseCache
+    from unified_connector import get_unified_connector
     from llm_connectors import extract_with_llm, enrich_product_data, enabled as llm_enabled
 from dotenv import load_dotenv
 
@@ -46,18 +46,8 @@ _db_connector = None
 _taxonomy = None
 
 def get_db_connector():
-    """Obtener conector a base de datos (singleton)"""
-    global _db_connector
-    if _db_connector is None:
-        _db_connector = SimplePostgreSQLConnector(
-            host="34.176.197.136",
-            port=5432,
-            database="postgres",
-            user="postgres",
-            password="Osmar2503!",
-            pool_size=5
-        )
-    return _db_connector
+    """Obtener conector unificado y seguro"""
+    return get_unified_connector()
 
 def get_persistence():
     """Obtener instancia de persistencia (singleton)"""
@@ -160,17 +150,17 @@ def normalize_one_integrated(raw: Dict[str, Any], metadata: Dict[str, Any], reta
     if llm_enabled():
         try:
             db_connector = get_db_connector()
-            ai_cache = SimpleDatabaseCache(db_connector)
+            ai_cache = db_connector  # El conector unificado ya tiene métodos de cache
             
             # Buscar en cache BD por fingerprint
-            ai_data = ai_cache.get(fingerprint) or {}
+            ai_data = ai_cache.get_ai_cache(fingerprint) or {}
             
             if not ai_data:
                 print(f"   IA: Enriqueciendo por primera vez...")
                 ai_data = extract_with_llm(name, category_id)
                 
                 if ai_data and "error" not in ai_data:
-                    ai_cache.set(fingerprint, ai_data)
+                    ai_cache.set_ai_cache(fingerprint, ai_data)
                     print(f"   IA: Cache guardado en BD (conf: {ai_data.get('confidence', 0):.2f})")
                     ai_enhanced = True
                     ai_confidence = ai_data.get('confidence', 0.0)
@@ -246,8 +236,8 @@ def normalize_one_integrated(raw: Dict[str, Any], metadata: Dict[str, Any], reta
     
     # 🔟 PERSISTENCIA EN BASE DE DATOS
     try:
-        persistence = get_persistence()
-        success = persistence.save_normalized_product(normalized_product)
+        db_connector = get_db_connector()
+        success = db_connector.save_normalized_product(normalized_product)
         
         if success:
             print(f"   BD: Producto guardado exitosamente")
@@ -290,8 +280,8 @@ def normalize_batch_integrated(items: list, retailer: str = None) -> list:
     
     # Estadísticas finales
     try:
-        persistence = get_persistence()
-        stats = persistence.get_processing_stats()
+        db_connector = get_db_connector()
+        stats = db_connector.get_processing_stats()
         print(f"Total productos en BD: {stats.get('productos_maestros', 0)}")
         print(f"Total precios en BD: {stats.get('precios_actuales', 0)}")
     except:

@@ -2,3 +2,9 @@ pydantic>=2.6,<3
 tomli; python_version < "3.11"
 tqdm>=4.66
 openai>=1.0.0
+sqlalchemy>=2.0.0
+pg8000>=1.29.0
+psycopg2-binary>=2.9.0
+google-cloud-sql-connector>=1.0.0
+python-dotenv>=1.0.0
+numpy>=1.24.0

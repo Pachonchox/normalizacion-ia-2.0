@@ -377,7 +377,7 @@ class CloudSQLConnector:
             FROM precios_historicos ph
             JOIN retailers r ON ph.retailer_id = r.id
             WHERE ph.fingerprint = :fingerprint
-                AND ph.fecha_snapshot >= CURRENT_DATE - INTERVAL ':days days'
+                AND ph.fecha_snapshot >= CURRENT_DATE - (:days || ' days')::interval
             ORDER BY ph.fecha_snapshot DESC, r.name
         """
         

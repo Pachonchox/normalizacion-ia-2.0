@@ -13,7 +13,7 @@ import shutil
 from tqdm import tqdm
 import hashlib
 
-from cloud_sql_connector import CloudSQLConnector, CloudSQLConfig, DatabaseCache
+from googlecloudsqlconnector import CloudSQLConnector, CloudSQLConfig, DatabaseCache
 
 # Configurar logging
 logging.basicConfig(
@@ -572,10 +572,14 @@ class RetailDataMigration:
         
         return validation_results
     
-    def rollback_migration(self, restore_from_backup: bool = False):
+    def rollback_migration(self, restore_from_backup: bool = False, confirm_rollback: bool = False):
         """
-        Rollback de la migración
+        Rollback de la migración con protección de confirmación
         """
+        if not confirm_rollback and not os.getenv('ALLOW_ROLLBACK', '').lower() == 'true':
+            logger.error("❌ ROLLBACK BLOQUEADO: Debe confirmar explícitamente con confirm_rollback=True o ALLOW_ROLLBACK=true")
+            return
+            
         logger.warning("⚠️ Iniciando rollback de migración...")
         
         try:
@@ -702,7 +706,7 @@ def main():
     args = parser.parse_args()
     
     # Crear conector
-    from cloud_sql_connector import create_connector_from_config
+    from googlecloudsqlconnector import create_connector_from_config
     connector = create_connector_from_config(args.config)
     
     # Crear migrador

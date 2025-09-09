@@ -1,0 +1,8 @@
+# Umbrales y políticas de evolución
+schema:
+  current_version: "v1"
+  upgrade_policy: "backward-compatible, versioned"
+evolution:
+  allow_new_optional_fields: true
+  require_migration_for_required: true
+  migration_scripts_dir: "./schemas/migrations"

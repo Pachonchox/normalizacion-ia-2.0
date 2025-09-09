@@ -1,0 +1,72 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "smartphones",
+      "name": "Smartphones",
+      "synonyms": [
+        "celular",
+        "celulares",
+        "smartphone",
+        "iphone",
+        "android",
+        "galaxy",
+        "redmi",
+        "moto"
+      ]
+    },
+    {
+      "id": "notebooks",
+      "name": "Notebooks",
+      "synonyms": [
+        "notebook",
+        "laptop",
+        "portátil",
+        "ultrabook",
+        "macbook"
+      ]
+    },
+    {
+      "id": "smart_tv",
+      "name": "Smart TV",
+      "synonyms": [
+        "smart tv",
+        "televisor",
+        "tv",
+        "oled",
+        "qled",
+        "uhd",
+        "4k",
+        "8k"
+      ]
+    },
+    {
+      "id": "perfumes",
+      "name": "Perfumes",
+      "synonyms": [
+        "perfume",
+        "edp",
+        "edt",
+        "parfum",
+        "eau de parfum",
+        "eau de toilette"
+      ]
+    },
+    {
+      "id": "printers",
+      "name": "Impresoras y Multifuncionales",
+      "synonyms": [
+        "impresora",
+        "printer",
+        "multifuncional",
+        "smart tank",
+        "hp ink"
+      ]
+    },
+    {
+      "id": "others",
+      "name": "Otros",
+      "synonyms": []
+    }
+  ]
+}

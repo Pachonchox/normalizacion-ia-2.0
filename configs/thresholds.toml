@@ -1,0 +1,11 @@
+[required_fields]
+name = true
+brand = true
+category = true
+price_current = true
+
+[optional_fields]
+price_original = true
+model = true
+url = true
+currency = true

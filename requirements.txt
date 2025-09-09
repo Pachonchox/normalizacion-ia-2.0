@@ -1,0 +1,4 @@
+pydantic>=2.6,<3
+tomli; python_version < "3.11"
+tqdm>=4.66
+openai>=1.0.0

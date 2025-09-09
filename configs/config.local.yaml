@@ -1,0 +1,31 @@
+# Configuración local (puedes duplicar por entorno)
+defaults:
+  currency: CLP
+  locale: es_CL
+  decimal_separator: ","
+  thousand_separator: "."
+  price_fields_priority: ["card_price", "normal_price", "ripley_price_text", "original_price"]
+cache:
+  enabled: true
+  sqlite_path: "./outputs/cache.sqlite"
+  ttl_days: 7
+llm:
+  mode: "off"   # off|mini|full
+  timeout_s: 12
+  max_items: 50
+  providers:
+    openai:
+      api_key_env: "OPENAI_API_KEY"
+      mini_model: "gpt-4o-mini"   # alias "gpt-5-mini"
+      full_model: "gpt-4o"        # alias "gpt-5"
+gating:
+  enable_rules_first: true
+  max_fallback_rate: 0.1
+  mini_confidence_threshold: 0.9
+  full_confidence_threshold: 0.8
+matching:
+  min_token_similarity: 85      # 0-100 (RapidFuzz token_set_ratio)
+  min_attr_score: 0.6
+  top_k: 10
+taxonomy:
+  version: "1.0"

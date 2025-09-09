@@ -1,0 +1,26 @@
+[general]
+base_currency = "CLP"
+decimal = ","
+thousand = "."
+
+[cache]
+enabled = true
+path = "out/cache.json"
+ttl_days = 7
+
+[llm]
+enabled = true  # ✅ IA ACTIVADA - Usar variables de entorno
+provider = "openai"
+model = "gpt-4o-mini"  # Modelo económico pero potente
+timeout_seconds = 15
+temperature = 0.1  # Baja variabilidad para consistencia
+
+[cache_ia]
+# Cache indefinido para metadatos IA (ttl_days=0)
+path = "out/ai_metadata_cache.json"
+ttl_days = 0  # 0 = Cache indefinido para metadatos
+enabled = true
+
+[matching]
+similarity_threshold = 0.86
+max_candidates_per_block = 50

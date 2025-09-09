@@ -125,20 +125,31 @@ class UnifiedPostgreSQLConnector:
             return False
     
     def save_normalized_product(self, product: Dict[str, Any]) -> bool:
-        """Guardar producto normalizado"""
+        """Guardar producto normalizado con validación completa"""
         try:
+            print(f"   BD: Guardando producto {product['product_id'][:16]}...")
+            
             # 1. Guardar producto maestro
             self._upsert_product_master(product)
+            print(f"   BD: OK Producto maestro guardado")
             
-            # 2. Guardar precio actual
+            # 2. Guardar precio actual  
             self._upsert_current_price(product)
+            print(f"   BD: OK Precio guardado")
             
-            # 3. Log de procesamiento
+            # 3. Validación post-inserción
+            self._validate_product_integrity(product['product_id'])
+            print(f"   BD: OK Integridad verificada")
+            
+            # 4. Log de procesamiento
             self._log_processing('product_save', 'success', product)
             
             return True
             
         except Exception as e:
+            print(f"   BD: ERROR en save_normalized_product: {e}")
+            import traceback
+            traceback.print_exc()
             self._log_processing('product_save', 'error', {'error': str(e)})
             return False
     
@@ -181,10 +192,23 @@ class UnifiedPostgreSQLConnector:
     
     def _upsert_current_price(self, product: Dict[str, Any]):
         """Insertar/actualizar precio actual"""
-        # Obtener retailer_id
+        # Obtener retailer_id con manejo robusto
         retailer_query = "SELECT id FROM retailers WHERE name = %(retailer)s"
         retailers = self.execute_query(retailer_query, {'retailer': product['retailer']})
-        retailer_id = retailers[0]['id'] if retailers else 1
+        
+        if retailers:
+            retailer_id = retailers[0]['id']
+        else:
+            # Si no existe el retailer, crear uno o usar default válido
+            print(f"   ADVERTENCIA: Retailer '{product['retailer']}' no encontrado, usando Paris como default")
+            retailer_id = 1  # Paris como default
+            
+            # Verificar que Paris existe
+            paris_check = self.execute_query("SELECT id FROM retailers WHERE id = 1")
+            if not paris_check:
+                raise ValueError(f"Retailer default (Paris) no existe. Retailer solicitado: '{product['retailer']}'")
+        
+        print(f"   Precio: Usando retailer_id={retailer_id} para '{product['retailer']}'")
         
         query = """
             INSERT INTO precios_actuales (
@@ -236,6 +260,26 @@ class UnifiedPostgreSQLConnector:
             self.execute_update(query, params)
         except:
             pass  # No fallar por logs
+    
+    def _validate_product_integrity(self, product_id: str):
+        """Validar integridad post-inserción"""
+        # Verificar que el producto existe
+        product_exists = self.execute_query(
+            "SELECT COUNT(*) as count FROM productos_maestros WHERE product_id = %(product_id)s AND active = true",
+            {'product_id': product_id}
+        )[0]['count'] > 0
+        
+        # Verificar que el precio existe  
+        price_exists = self.execute_query(
+            "SELECT COUNT(*) as count FROM precios_actuales WHERE product_id = %(product_id)s",
+            {'product_id': product_id}
+        )[0]['count'] > 0
+        
+        if not product_exists:
+            raise ValueError(f"Producto {product_id} no se insertó correctamente")
+        
+        if not price_exists:
+            raise ValueError(f"Precio para producto {product_id} no se insertó correctamente")
     
     def get_processing_stats(self) -> Dict[str, Any]:
         """Obtener estadísticas de procesamiento"""

@@ -28,7 +28,10 @@ except ImportError:
     from categorize_db import load_taxonomy, categorize_enhanced, get_brand_aliases
     from db_persistence import get_persistence_instance
     from unified_connector import get_unified_connector
-    from llm_connectors import extract_with_llm, enrich_product_data, enabled as llm_enabled
+    try:
+        from llm_connectors_optimized import extract_with_llm, enrich_product_data, enabled as llm_enabled
+    except ImportError:
+        from llm_connectors import extract_with_llm, enrich_product_data, enabled as llm_enabled
 from dotenv import load_dotenv
 
 # Cargar variables de entorno
@@ -242,10 +245,12 @@ def normalize_one_integrated(raw: Dict[str, Any], metadata: Dict[str, Any], reta
         if success:
             print(f"   BD: Producto guardado exitosamente")
         else:
-            print(f"   BD: Error guardando producto")
+            print(f"   BD: Error guardando producto (success='{success}')")
             
     except Exception as e:
         print(f"   BD: Error de persistencia: {e}")
+        import traceback
+        traceback.print_exc()
     
     print(f"   OK: Normalizacion completada - AI:{ai_enhanced} BD:OK")
     
@@ -255,7 +260,49 @@ def normalize_batch_integrated(items: list, retailer: str = None) -> list:
     """Normalizar múltiples productos en lote"""
     
     print(f"=== NORMALIZACION INTEGRADA LOTE ===")
-    print(f"Procesando {len(items)} productos...")
+    print(f"Productos recibidos: {len(items)}")
+    
+    # APLICAR FILTRO ANTES DEL PROCESAMIENTO
+    try:
+        import sys
+        import os
+        sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'Scrappers'))
+        from product_filter import ProductFilter
+        
+        filter_instance = ProductFilter()
+        
+        # Adaptar formato para el filtro
+        products_for_filter = []
+        for item in items:
+            product = item.get("item", item)
+            products_for_filter.append(product)
+        
+        filtered_products, stats = filter_instance.filter_products(products_for_filter)
+        
+        print(f"FILTRO APLICADO:")
+        print(f"   Total original: {stats['total_original']}")
+        print(f"   Filtrados por accesorio: {stats['filtered_accessory']}")
+        print(f"   Filtrados por precio bajo (<$50.000): {stats['filtered_low_price']}")
+        print(f"   Filtrados por reacondicionado: {stats['filtered_refurbished']}")
+        print(f"   Total filtrados: {stats['total_filtered']}")
+        print(f"   Productos válidos para procesar: {stats['total_remaining']}")
+        
+        # Reconstruir items filtrados
+        filtered_items = []
+        for product in filtered_products:
+            # Encontrar el item original correspondiente
+            for original_item in items:
+                original_product = original_item.get("item", original_item)
+                if original_product.get("name") == product.get("name"):
+                    filtered_items.append(original_item)
+                    break
+        
+        items = filtered_items
+        
+    except Exception as e:
+        print(f"Error aplicando filtro, procesando todos los productos: {e}")
+    
+    print(f"Procesando {len(items)} productos (post-filtro)...")
     
     results = []
     errors = 0
@@ -264,7 +311,7 @@ def normalize_batch_integrated(items: list, retailer: str = None) -> list:
         try:
             raw = item_data.get("item", item_data)
             metadata = item_data.get("metadata", {})
-            item_retailer = retailer or item_data.get("retailer", "Unknown")
+            item_retailer = retailer or item_data.get("_retailer", item_data.get("retailer", "Unknown"))
             
             normalized = normalize_one_integrated(raw, metadata, item_retailer)
             results.append(normalized)

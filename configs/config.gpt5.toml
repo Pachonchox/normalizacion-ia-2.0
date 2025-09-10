@@ -1,0 +1,138 @@
+# 🚀 GPT-5 Configuration
+# Configuración optimizada para migración a GPT-5 con batch processing
+
+[general]
+base_currency = "CLP"
+decimal = ","
+thousand = "."
+environment = "production"
+debug = false
+
+[llm]
+enabled = true
+primary_provider = "openai"
+models = ["gpt-5-mini", "gpt-5", "gpt-4o-mini"]  # En orden de preferencia
+default_model = "gpt-5-mini"
+routing_enabled = true  # Activar routing inteligente
+batch_enabled = true  # Activar batch processing
+timeout_seconds = 20
+temperature = 0.1
+max_retries = 3
+
+[routing]
+# Umbrales de complejidad para routing
+simple_threshold = 0.35  # <= 0.35 usa GPT-5-mini
+complex_threshold = 0.70  # >= 0.70 usa GPT-5
+fallback_enabled = true  # Habilitar cadena de fallback
+cost_optimization = true  # Priorizar modelos económicos
+
+[batch]
+# Configuración de Batch API
+enabled = true
+max_batch_size = 50000  # Límite de OpenAI
+optimal_batch_size = 10000  # Tamaño óptimo para procesamiento
+window_hours = 24  # Ventana de completación
+discount_factor = 0.5  # 50% descuento en batch
+initial_population_mode = true  # Modo especial para carga inicial
+parallel_batches = 3  # Batches simultáneos máximos
+
+[cache]
+# Cache multicapa
+enabled = true
+
+[cache.l1]
+# Cache en memoria (Redis futuro)
+type = "memory"
+max_items = 10000
+ttl_seconds = 3600  # 1 hora
+
+[cache.l2]  
+# Cache semántico con embeddings
+type = "semantic"
+backend = "postgresql"  # postgresql, faiss, memory
+similarity_threshold = 0.85
+embedding_model = "text-embedding-3-small"
+max_items = 100000
+
+[cache.l3]
+# Cache persistente en PostgreSQL
+type = "postgresql"
+ttl_days = 0  # 0 = indefinido para metadatos
+path = "out/cache.json"  # Fallback si falla BD
+
+[cache_ia]
+# Cache específico para respuestas IA
+path = "out/ai_metadata_cache.json"
+ttl_days = 0  # Cache indefinido
+enabled = true
+semantic_enabled = true  # Búsqueda por similitud
+
+[database]
+# Configuración de base de datos principal
+host = "${DB_HOST}"  # Usar variable de entorno
+port = 5432
+database = "postgres"
+user = "${DB_USER}"
+password = "${DB_PASSWORD}"
+pool_size = 10
+max_overflow = 20
+vector_extension = true  # pgvector para embeddings
+
+[matching]
+# Configuración de matching mejorada
+similarity_threshold = 0.86
+semantic_matching = true  # Usar embeddings
+max_candidates_per_block = 100  # Aumentado para batch
+use_multimodal = false  # Futuro: incluir imágenes
+
+[monitoring]
+# Métricas y monitoreo
+enabled = true
+metrics_endpoint = "/metrics"
+log_level = "INFO"
+track_costs = true  # Seguimiento de costos por modelo
+track_performance = true  # Latencia y throughput
+alert_cost_threshold = 100.0  # Alertar si costo > $100 USD/día
+
+[optimization]
+# Optimizaciones adicionales
+prompt_optimization = true  # Prompts adaptativos
+token_minimization = true  # Reducir tokens agresivamente
+parallel_processing = true  # Procesamiento paralelo
+adaptive_timeout = true  # Timeout según complejidad
+cache_warming = true  # Pre-calentar cache con productos frecuentes
+
+[models.gpt-5-mini]
+# Configuración específica GPT-5-mini
+max_tokens = 250
+temperature = 0.1
+cost_per_1k_tokens = 0.0003  # Estimado
+batch_discount = 0.5
+priority = 1  # Máxima prioridad (más económico)
+
+[models.gpt-5]
+# Configuración específica GPT-5
+max_tokens = 500
+temperature = 0.2
+cost_per_1k_tokens = 0.001  # Estimado
+batch_discount = 0.5
+priority = 2
+
+[models.gpt-4o-mini]
+# Fallback legacy
+max_tokens = 300
+temperature = 0.1
+cost_per_1k_tokens = 0.0015  # Real actual
+batch_discount = 0.5
+priority = 3  # Menor prioridad (fallback)
+
+[features]
+# Features habilitadas
+semantic_cache = true
+batch_processing = true
+intelligent_routing = true
+prompt_optimization = true
+cost_tracking = true
+auto_scaling = false  # Futuro
+predictive_caching = false  # Futuro
+multimodal_processing = false  # Futuro

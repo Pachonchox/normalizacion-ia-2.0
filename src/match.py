@@ -1,4 +1,3 @@
-\
 from __future__ import annotations
 import json, os
 from collections import defaultdict

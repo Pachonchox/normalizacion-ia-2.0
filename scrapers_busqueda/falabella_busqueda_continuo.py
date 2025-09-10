@@ -139,12 +139,28 @@ def extract_products_continuo(soup, page_num, search_term):
             if name_elem:
                 product_name = name_elem.get_text(strip=True)
             
-            # Link
-            link_elem = container.select_one('a[href*="/product/"]')
-            if link_elem:
-                href = link_elem.get('href', '')
+            # Link del producto 🔗
+            product_link = ""
+
+            # El container es el <a> tag directamente
+            if container.name == 'a':
+                href = container.get('href', '')
                 if href:
                     product_link = f"https://www.falabella.com{href}" if href.startswith('/') else href
+
+            # Si no es <a>, buscar padre o hijo <a>
+            if not product_link:
+                parent_link = container.find_parent('a')
+                if parent_link:
+                    href = parent_link.get('href', '')
+                    if href:
+                        product_link = f"https://www.falabella.com{href}" if href.startswith('/') else href     
+                else:
+                    link_elem = container.select_one('a[href*="/product/"]')
+                    if link_elem:
+                        href = link_elem.get('href', '')
+                        if href:
+                            product_link = f"https://www.falabella.com{href}" if href.startswith('/') else href
             
             # Código
             if product_link:

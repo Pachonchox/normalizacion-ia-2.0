@@ -1,8 +1,8 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-🚀 GPT-5 Intelligent Router with Batch Support
-Sistema de routing inteligente que determina el modelo óptimo basado en complejidad
+ðŸš€ GPT-5 Intelligent Router with Batch Support
+Sistema de routing inteligente que determina el modelo Ã³ptimo basado en complejidad
 y agrupa productos para procesamiento batch masivo (50% descuento en costos)
 """
 
@@ -19,16 +19,16 @@ logger = logging.getLogger(__name__)
 
 
 class ModelType(Enum):
-    """Modelos disponibles con sus características"""
-    GPT5_MINI = "gpt-5-mini"  # Rápido y económico (80% casos)
+    """Modelos disponibles con sus caracterÃ­sticas"""
+    GPT5_MINI = "gpt-5-mini"  # RÃ¡pido y econÃ³mico (80% casos)
     GPT5 = "gpt-5"  # Complejo y preciso (15% casos)  
     GPT4O_MINI = "gpt-4o-mini"  # Fallback legacy (5% casos)
-    GPT4O = "gpt-4o"  # Modelo más potente para fallback final
+    GPT4O = "gpt-4o"  # Modelo mÃ¡s potente para fallback final
 
 
 @dataclass
 class ModelConfig:
-    """Configuración específica por modelo"""
+    """ConfiguraciÃ³n especÃ­fica por modelo"""
     name: str
     max_completion_tokens: int
     temperature: float
@@ -38,7 +38,7 @@ class ModelConfig:
 
 
 class ComplexityAnalyzer:
-    """Analizador de complejidad de productos para routing óptimo"""
+    """Analizador de complejidad de productos para routing Ã³ptimo"""
     
     def __init__(self):
         self.technical_terms = {
@@ -70,7 +70,7 @@ class ComplexityAnalyzer:
         """
         Calcula score de complejidad de 0.0 a 1.0
         0.0-0.3: Simple (GPT-5-mini)
-        0.3-0.7: Medio (GPT-5-mini con validación)
+        0.3-0.7: Medio (GPT-5-mini con validaciÃ³n)
         0.7-1.0: Complejo (GPT-5 full)
         """
         name = product.get('name', '').lower()
@@ -83,20 +83,20 @@ class ComplexityAnalyzer:
         name_length_score = min(len(name) / 300, 1.0)
         complexity_factors.append(name_length_score * 0.15)
         
-        # Factor 2: Términos técnicos
+        # Factor 2: TÃ©rminos tÃ©cnicos
         technical_count = sum(1 for term in self.technical_terms if term in name)
         technical_score = min(technical_count / 5, 1.0)
         complexity_factors.append(technical_score * 0.25)
         
-        # Factor 3: Categoría
+        # Factor 3: CategorÃ­a
         if category in self.complex_categories:
             complexity_factors.append(self.complex_categories[category] * 0.3)
         elif category in self.simple_categories:
             complexity_factors.append(self.simple_categories[category] * 0.3)
         else:
-            complexity_factors.append(0.4 * 0.3)  # Categoría desconocida = medio
+            complexity_factors.append(0.4 * 0.3)  # CategorÃ­a desconocida = medio
         
-        # Factor 4: Precio (productos caros suelen ser más complejos)
+        # Factor 4: Precio (productos caros suelen ser mÃ¡s complejos)
         if price > 1000000:  # > 1M CLP
             complexity_factors.append(0.8 * 0.15)
         elif price > 500000:  # > 500K CLP
@@ -106,7 +106,7 @@ class ComplexityAnalyzer:
         else:
             complexity_factors.append(0.2 * 0.15)
         
-        # Factor 5: Multi-variante (productos con múltiples opciones)
+        # Factor 5: Multi-variante (productos con mÃºltiples opciones)
         has_variants = bool(re.search(r'\d+GB|\d+TB|/|\||,\s*\d+', name))
         complexity_factors.append(0.7 * 0.15 if has_variants else 0.2 * 0.15)
         
@@ -151,7 +151,7 @@ class GPT5Router:
     
     def route_single(self, product: Dict[str, Any]) -> Tuple[ModelType, float]:
         """
-        Determina el modelo óptimo para un producto individual
+        Determina el modelo Ã³ptimo para un producto individual
         Returns: (modelo, complexity_score)
         """
         complexity = self.analyzer.calculate_complexity(product)
@@ -161,12 +161,12 @@ class GPT5Router:
         elif complexity >= self.thresholds['complex']:
             return ModelType.GPT5, complexity
         else:
-            # Zona media: GPT-5-mini con validación adicional
+            # Zona media: GPT-5-mini con validaciÃ³n adicional
             return ModelType.GPT5_MINI, complexity
     
     def route_batch(self, products: List[Dict[str, Any]]) -> Dict[ModelType, List[Dict[str, Any]]]:
         """
-        Agrupa productos por modelo óptimo para batch processing
+        Agrupa productos por modelo Ã³ptimo para batch processing
         Maximiza el ahorro agrupando productos similares
         """
         batches = {
@@ -187,10 +187,10 @@ class GPT5Router:
             
             batches[model].append(product)
         
-        # Log de distribución
+        # Log de distribuciÃ³n
         total = len(products)
         if total > 0:
-            logger.info(f"📊 Batch Routing Distribution:")
+            logger.info(f"ðŸ“Š Batch Routing Distribution:")
             logger.info(f"  - GPT-5-mini: {len(batches[ModelType.GPT5_MINI])} ({len(batches[ModelType.GPT5_MINI])*100/total:.1f}%)")
             logger.info(f"  - GPT-5: {len(batches[ModelType.GPT5])} ({len(batches[ModelType.GPT5])*100/total:.1f}%)")
             logger.info(f"  - GPT-4o-mini: {len(batches[ModelType.GPT4O_MINI])} ({len(batches[ModelType.GPT4O_MINI])*100/total:.1f}%)")
@@ -200,9 +200,9 @@ class GPT5Router:
     def optimize_batches(self, batches: Dict[ModelType, List[Dict[str, Any]]], 
                         max_batch_size: int = 100) -> List[Dict[str, Any]]:
         """
-        Optimiza batches para máximo ahorro
+        Optimiza batches para mÃ¡ximo ahorro
         - Agrupa hasta max_batch_size productos por request
-        - Prioriza modelos económicos
+        - Prioriza modelos econÃ³micos
         - Retorna lista de batches optimizados
         """
         optimized = []
@@ -213,7 +213,7 @@ class GPT5Router:
             
             config = self.models[model_type]
             
-            # Dividir en sub-batches de tamaño óptimo
+            # Dividir en sub-batches de tamaÃ±o Ã³ptimo
             for i in range(0, len(products), max_batch_size):
                 batch = products[i:i + max_batch_size]
                 
@@ -226,7 +226,7 @@ class GPT5Router:
                     'priority': self._calculate_priority(model_type, len(batch))
                 })
         
-        # Ordenar por prioridad (procesar primero los más económicos/grandes)
+        # Ordenar por prioridad (procesar primero los mÃ¡s econÃ³micos/grandes)
         optimized.sort(key=lambda x: x['priority'], reverse=True)
         
         return optimized
@@ -234,11 +234,11 @@ class GPT5Router:
     def get_fallback_chain(self, model: ModelType) -> List[ModelType]:
         """
         Obtener cadena de fallback para un modelo (siempre a modelo superior)
-        IMPORTANTE: El fallback siempre va a un modelo más potente, nunca a uno menor
+        IMPORTANTE: El fallback siempre va a un modelo mÃ¡s potente, nunca a uno menor
         """
         chains = {
             ModelType.GPT5_MINI: [ModelType.GPT5_MINI, ModelType.GPT5],  # Fallback a GPT-5 (superior)
-            ModelType.GPT5: [ModelType.GPT5, ModelType.GPT4O],  # Fallback a GPT-4o (más potente)
+            ModelType.GPT5: [ModelType.GPT5, ModelType.GPT4O],  # Fallback a GPT-4o (mÃ¡s potente)
             ModelType.GPT4O_MINI: [ModelType.GPT4O_MINI, ModelType.GPT4O],  # Fallback a GPT-4o
             ModelType.GPT4O: [ModelType.GPT4O]  # No hay fallback superior
         }
@@ -246,7 +246,7 @@ class GPT5Router:
     
     def route_single_extended(self, product: Dict[str, Any]) -> Tuple[str, float, str]:
         """
-        Routing extendido con información detallada
+        Routing extendido con informaciÃ³n detallada
         Returns: (model_name, complexity_score, routing_reason)
         """
         model_type, complexity = self.route_single(product)
@@ -274,10 +274,10 @@ class GPT5Router:
     def _calculate_priority(self, model_type: ModelType, batch_size: int) -> float:
         """
         Calcula prioridad de procesamiento
-        Favorece batches grandes de modelos económicos
+        Favorece batches grandes de modelos econÃ³micos
         """
         model_weights = {
-            ModelType.GPT5_MINI: 1.0,  # Máxima prioridad
+            ModelType.GPT5_MINI: 1.0,  # MÃ¡xima prioridad
             ModelType.GPT5: 0.5,  # Media prioridad
             ModelType.GPT4O_MINI: 0.3  # Baja prioridad (fallback)
         }
@@ -286,14 +286,12 @@ class GPT5Router:
     
     def get_fallback_chain(self, primary_model: ModelType) -> List[ModelType]:
         """
-        Define cadena de fallback para resiliencia
+        Cadena de fallback: gpt-5-mini → gpt-5. Sin 4o/4o-mini.
         """
         chains = {
-            ModelType.GPT5_MINI: [ModelType.GPT5_MINI, ModelType.GPT5, ModelType.GPT4O_MINI],
-            ModelType.GPT5: [ModelType.GPT5, ModelType.GPT5_MINI, ModelType.GPT4O_MINI],
-            ModelType.GPT4O_MINI: [ModelType.GPT4O_MINI, ModelType.GPT5_MINI]
+            ModelType.GPT5_MINI: [ModelType.GPT5_MINI, ModelType.GPT5],
+            ModelType.GPT5: [ModelType.GPT5],
         }
-        
         return chains.get(primary_model, [ModelType.GPT5_MINI])
     
     def estimate_savings(self, products: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -303,7 +301,7 @@ class GPT5Router:
         batches = self.route_batch(products)
         optimized = self.optimize_batches(batches)
         
-        # Costo con modelo único (GPT-4o-mini)
+        # Costo con modelo Ãºnico (GPT-4o-mini)
         baseline_config = self.models[ModelType.GPT4O_MINI]
         baseline_cost = len(products) * 150 / 1000 * baseline_config.cost_per_1k_tokens
         
@@ -341,13 +339,13 @@ if __name__ == "__main__":
     ]
     
     # Test routing individual
-    print("🎯 Individual Routing:")
+    print("ðŸŽ¯ Individual Routing:")
     for product in test_products:
         model, complexity = router.route_single(product)
         print(f"  {product['name'][:40]}: {model.value} (complexity: {complexity:.2f})")
     
     # Test batch routing
-    print("\n📦 Batch Processing:")
+    print("\nðŸ“¦ Batch Processing:")
     savings = router.estimate_savings(test_products * 20)  # Simular 100 productos
     print(f"  Total Products: {savings['total_products']}")
     print(f"  Baseline Cost: ${savings['baseline_cost_usd']}")

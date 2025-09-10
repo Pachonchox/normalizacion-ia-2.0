@@ -9,6 +9,7 @@ import json
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 from simple_db_connector import SimplePostgreSQLConnector
+from config_manager import get_config
 
 class DatabasePersistence:
     """Sistema completo de persistencia en base de datos"""
@@ -263,14 +264,14 @@ class DatabasePersistence:
 
 def get_persistence_instance() -> DatabasePersistence:
     """Factory para obtener instancia de persistencia"""
-    
+    cfg = get_config().database
     connector = SimplePostgreSQLConnector(
-        host="34.176.197.136",
-        port=5432,
-        database="postgres",
-        user="postgres",
-        password="Osmar2503!",
-        pool_size=5
+        host=cfg.host,
+        port=cfg.port,
+        database=cfg.database,
+        user=cfg.user,
+        password=cfg.password,
+        pool_size=cfg.pool_size
     )
     
     return DatabasePersistence(connector)

@@ -12,7 +12,10 @@ from typing import Dict, List, Any, Optional
 import json
 from datetime import datetime
 
-from config_manager import get_config
+try:
+    from .config_manager import get_config
+except ImportError:
+    from config_manager import get_config
 
 class UnifiedPostgreSQLConnector:
     """

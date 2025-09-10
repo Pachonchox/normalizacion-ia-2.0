@@ -1,122 +1,57 @@
-# Normalización IA 2.0 — Retail Chile
+Normalización IA 2.0 — Estado Actual y Guía
 
-Sistema E2E para normalización de productos, enriquecimiento opcional con IA, categorización, cache y persistencia en PostgreSQL/Google Cloud SQL, con auditoría y vistas materializadas para análisis.
+Resumen
+- Objetivo: pipeline de ingesta → filtro → categorización → normalización → persistencia en PostgreSQL para comparar precios entre retailers.
+- Alcance de este README: estado actual del código, cómo ejecutarlo de forma segura, y dónde están los módulos clave.
+- LLM: habilitado por defecto. Se usa `gpt-5-mini` con fallback a `gpt-5`.
 
-## Características
-- Persistencia completa en PostgreSQL (tablas: productos_maestros, precios_actuales, precios_historicos, ai_metadata_cache, etc.)
-- Conectores listos para PostgreSQL local y Google Cloud SQL
-- IA opcional (OpenAI) con cache indefinido por fingerprint
-- CLI clásico y CLI integrado con BD
-- Auditoría de datos y vistas materializadas para reportes
+Estructura Clave
+- `src/retail_normalizer/`: módulos focales actuales para normalización simple
+  - `ingest.py`: carga de archivos JSON y utilidades de precios
+  - `categorize.py`: categorización por taxonomía (sin LLM)
+  - `normalize.py`: inferencia de marca y extracción de atributos
+  - `ingest.py`/`persistence.py`/`models.py`: utilidades de datos
+- `src/categorize.py`: categorización híbrida (BD + fallback JSON)
+- `src/normalize_integrated.py`: pipeline integrado (categoriza + normaliza + guarda en BD) usando GPT‑5 (mini → fallback a full)
+- `src/unified_connector.py`: conector unificado a PostgreSQL (recomendado)
+- `src/base.sql`: DDL de la base de datos (tablas, índices, triggers)
+- `src/gpt5/prompts.py`: prompts optimizados por categoría/modo
 
-## Requisitos
-- Python >= 3.10
-- PostgreSQL 13+ o Google Cloud SQL (PostgreSQL)
-- `pip install -r requirements.txt`
+Requisitos
+- Python 3.10+
+- PostgreSQL accesible (ver variables de entorno)
+- Paquetes: `pip install -r requirements.txt`
 
-## Configuración
-- Copia `.env.example` a `.env` y completa credenciales:
-  - `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_POOL_SIZE`
-  - `OPENAI_API_KEY` y `LLM_ENABLED=true` si usarás IA
-- Inicializa el esquema ejecutando `src/base.sql` en tu BD (psql o cliente favorito)
-- Opcional Google Cloud SQL: configura `configs/config.local.toml` con una sección `[database]` como ejemplo:
+Configuración (env)
+- `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_POOL_SIZE`
+- `LLM_ENABLED=true` para forzar IA siempre (default activado por configuración interna). Requiere `OPENAI_API_KEY`.
+- `OPENAI_MODEL` opcional; el router usa `gpt-5-mini` por defecto con fallback a `gpt-5`.
+- Ver `docs/Configuration.md` para detalles y valores por defecto.
 
-```toml
-[database]
-project_id = "tu-proyecto"
-region = "us-central1"
-instance_name = "instancia-sql"
-database_name = "retail_prices"
-user = "postgres"
-password = "${DB_PASSWORD}"
-use_cloud_sql_proxy = true
-```
+Flujo Sugerido (sin LLM, salida a BD)
+1) Preparar fuente: directorio con `.json` crudos (cada archivo con `products` y `metadata` cuando sea posible).
+2) Ejecutar pipeline integrado:
+   - `python -m src.normalize_integrated` (contiene un ejemplo de prueba en `__main__`).
+   - O invoca programáticamente `normalize_batch_integrated(items)` pasando una lista de ítems crudos.
+3) Persistencia: `src/unified_connector.py` inserta/actualiza `productos_maestros` y `precios_actuales`.
 
-## Uso rápido
-```bash
-python -m venv .venv && . .venv/bin/activate
-pip install -r requirements.txt
+Notas de Estado
+- Canon actual: pipeline integrado con GPT‑5 (mini → full) y `unified_connector`.
+- Si sólo quieres JSON normalizado (sin BD): usa `src/retail_normalizer` y `src/persistence.write_jsonl` (modo lite, sin IA).
 
-# A) CLI clásico (archivos JSON → JSONL)
-python -m src.cli normalize --input ./tests/data --out ./out
-python -m src.cli match --normalized ./out/normalized_products.jsonl --out ./out
+Puntos de Entrada Relevantes
+- BD: `src/unified_connector.py:get_unified_connector()`
+- Categorización: `src/categorize.load_taxonomy()` y `src/categorize.categorize_enhanced()`
+- Normalización simple: `src/retail_normalizer/normalize.py` y `src/retail_normalizer/categorize.py`
+- Prompts LLM: `src/gpt5/prompts.py` (si activas LLM)
 
-# B) CLI integrado con BD (recomendado)
-python -m src.cli_integrated normalize --input ./data --out ./out
-python -m src.cli_integrated stats
-```
+Prueba Rápida (10 productos)
+- Ejecuta: `PYTHONPATH=. python scripts/load_test_10.py`
+- Requiere `.env` con `DB_*` y `OPENAI_API_KEY` si deseas IA real. Sin API, el pipeline sigue funcionando (sin IA, categorías por fallback).
 
-Notas de configuración IA:
-- Por defecto el código desactiva IA si no defines `LLM_ENABLED`; actívala en `.env`.
-- El cache IA integrado usa BD; si falla, hay fallback a `out/ai_metadata_cache.json`.
-
-## Base de datos
-- Esquema completo: `src/base.sql`
-  - Tablas principales: `productos_maestros`, `precios_actuales` (hot table), `precios_historicos` (particionada mensual)
-  - Cache IA: `ai_metadata_cache` (indefinido, con hits/last_hit)
-  - Configuración: `categories`, `brands`, `attributes_schema`, `retailers`, `system_config`
-  - Auditoría/alertas: `processing_logs`, `price_alerts`
-  - Vistas materializadas: `mv_comparacion_precios`, `mv_cache_metrics`
-
-Aplicación del esquema (ejemplo):
-```bash
-psql postgresql://USER:PASS@HOST:PORT/DB -f src/base.sql
-```
-
-## Migración de archivos a BD
-Módulo: `src/modulomigracion.py` (CLI)
-
-Migra taxonomía, marcas, cache IA y productos normalizados (.jsonl) a la base de datos, con backup automático de archivos y validación final.
-
-```bash
-# Config desde TOML (Cloud SQL) o variables de entorno
-python -m src.modulomigracion \
-  --config configs/config.local.toml \
-  --taxonomy configs/taxonomy_v1.json \
-  --brands configs/brand_aliases.json \
-  --cache out/ai_metadata_cache.json \
-  --products out/products_normalized.jsonl
-
-# Validar sin migrar
-python -m src.modulomigracion --validate-only
-```
-
-Salida típica: reporte `migration_report_YYYYMMDD_HHMMSS.json` y refresco de vistas materializadas.
-
-## Conectores de BD
-- PostgreSQL local/unificado: `src/unified_connector.py` + `src/config_manager.py` (lee `.env` y usa psycopg2 con pool)
-- Google Cloud SQL: `src/googlecloudsqlconnector.py` (Connector + SQLAlchemy; lectura `configs/config.local.toml`)
-
-Funciones destacadas (Cloud SQL):
-- `get_ai_cache` / `set_ai_cache` en BD (reemplaza archivos JSON)
-- `upsert_price` con detección de cambios y triggers
-- `detect_price_changes`, `create_alert`, `check_alerts`, `refresh_materialized_views`
-
-## Scripts útiles
-- Auditorías: `src/db_audit_simple.py`, `src/db_auditor.py`
-- Persistencia BD: `src/db_persistence.py`
-- Normalización integrada: `src/normalize_integrated.py`, `src/cli_integrated.py`
-- Limpieza y verificación: `cleanup_obsolete_files.py`, `verify_products.py`, `verify_migration.py`
-- Pipeline shell: `pipeline_completo.sh`
-
-## Estructura de carpetas (resumen)
-- `src/` código principal (CLI, normalización, BD, conectores, schema)
-- `configs/` taxonomía, marcas, configuración local
-- `data/` datos de scrapers (entrada)
-- `out/` resultados, perfiles y cache alternativo
-- `Scrappers/` orquestadores y scrapers (independientes)
-
-## Seguridad y buenas prácticas
-- Usa `.env` para credenciales (no commitees `.env`); base en `.env.example`
-- Revisa `SECURITY_RECOMMENDATIONS.md`
-- Evita credenciales hardcodeadas; algunos scripts legacy las incluyen para pruebas (migrarlas a `.env`)
-
-## Documentación relacionada
-- Guía completa de uso: `GUIA_COMPLETA_USO.md`
-- Guía de consultas SQL: `GUIA_SQL_CONSULTAS.md`
-- Pruebas e integridad: `PRUEBAS_INTEGRIDAD_REALIZADAS.md`, `README_PRUEBAS.md`
-
-## Troubleshooting
-- Verifica conexión BD y `.env`
-- Ejecuta `src/db_audit_simple.py` para un estado rápido
-- IA: confirma `LLM_ENABLED=true` y `OPENAI_API_KEY`
+Documentación adicional
+- `docs/Overview.md`: arquitectura y módulos
+- `docs/Pipeline.md`: flujo de extremo a extremo
+- `docs/Configuration.md`: variables de entorno y configuración
+- `docs/Prompts.md`: diseño y uso de prompts
+- `docs/KnownIssues.md`: problemas detectados y mitigaciones

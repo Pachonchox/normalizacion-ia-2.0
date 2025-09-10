@@ -1,4 +1,3 @@
-\
 from __future__ import annotations
 import re, hashlib, os
 from typing import Dict, Any, Tuple, Optional
@@ -11,6 +10,7 @@ try:
     from .googlecloudsqlconnector import CloudSQLConnector, DatabaseCache
     from .simple_db_connector import SimplePostgreSQLConnector, SimpleDatabaseCache
     from .llm_connectors import extract_with_llm, enrich_product_data, enabled as llm_enabled
+    from .config_manager import get_config
 except ImportError:
     # Imports absolutos (cuando se ejecuta directamente)
     from utils import parse_price, slugify
@@ -20,6 +20,7 @@ except ImportError:
     from googlecloudsqlconnector import CloudSQLConnector, DatabaseCache
     from simple_db_connector import SimplePostgreSQLConnector, SimpleDatabaseCache
     from llm_connectors import extract_with_llm, enrich_product_data, enabled as llm_enabled
+    from config_manager import get_config
 
 # Configuración de base de datos global
 _db_connector = None
@@ -28,14 +29,15 @@ def get_db_connector():
     """Obtener conector a base de datos (singleton)"""
     global _db_connector
     if _db_connector is None:
-        # Usar conector simple para conexión directa PostgreSQL
+        # Usar configuración desde .env a través de config_manager
+        cfg = get_config().database
         _db_connector = SimplePostgreSQLConnector(
-            host="34.176.197.136",
-            port=5432,
-            database="postgres",
-            user="postgres",
-            password="Osmar2503!",
-            pool_size=5
+            host=cfg.host,
+            port=cfg.port,
+            database=cfg.database,
+            user=cfg.user,
+            password=cfg.password,
+            pool_size=cfg.pool_size
         )
     return _db_connector
 
